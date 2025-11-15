@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Users, Calendar, Trash2, LogOut, FileSpreadsheet } from 'lucide-react';
+import { Users, Calendar, Trash2, LogOut, FileSpreadsheet, Send } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 import logoBrix from 'figma:asset/469c37be3526dc1d49e9eb7700555671b6112432.png';
 
 interface AdminPanelProps {
@@ -26,9 +27,21 @@ interface SurveyResponse {
 
 export function AdminPanel({ onLogout }: AdminPanelProps) {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // EmailJS configuration
+  const emailConfig = {
+    serviceId: 'service_7v9yiqj',
+    templateId: 'template_4bdeeal',
+    publicKey: 'gzdvhtfWSXknqD1d4',
+    destination: 'afgarciaos@gmail.com'
+  };
 
   useEffect(() => {
     loadResponses();
+    // Initialize EmailJS with public key
+    emailjs.init('gzdvhtfWSXknqD1d4');
   }, []);
 
   const loadResponses = () => {
@@ -44,6 +57,51 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
     if (confirm('¿Estás seguro de que deseas eliminar TODAS las respuestas? Esta acción no se puede deshacer.')) {
       localStorage.removeItem('brix_survey_responses');
       setResponses([]);
+    }
+  };
+
+  const sendTestEmail = async () => {
+    setIsEmailLoading(true);
+    setEmailStatus('idle');
+
+    try {
+      // Template parameters que coinciden exactamente con tu test exitoso
+      const templateParams = {
+        timestamp: new Date().toLocaleString('es-ES'),
+        pregunta_01: 'Edad: 25 años',
+        pregunta_02: 'Género: Femenino',
+        pregunta_03: 'Educación: Universitario',
+        pregunta_04: 'Ciudad: Madrid',
+        pregunta_05: 'Ocupación: Ingeniero',
+        pregunta_06: 'Dispositivos: Smartphone, Laptop',
+        pregunta_07: 'Uso internet: Diariamente',
+        pregunta_08: 'Red social: Instagram',
+        pregunta_09: 'Contenido: Videos',
+        pregunta_10: 'Horas dispositivos: 5-7 horas',
+        pregunta_11: 'Opinión tecnología: Muy útil',
+        respuestas_completas: 'TEST - ' + new Date().toISOString(),
+        name: 'Sistema BRIX',
+        email: emailConfig.destination
+      };
+
+      console.log('Enviando email con parámetros:', templateParams);
+
+      const result = await emailjs.send(
+        emailConfig.serviceId,
+        emailConfig.templateId,
+        templateParams
+      );
+
+      console.log('Email enviado exitosamente:', result);
+      setEmailStatus('success');
+      setTimeout(() => setEmailStatus('idle'), 3000);
+    } catch (error) {
+      console.error('Error detallado enviando email:', error);
+      console.error('Configuración usada:', emailConfig);
+      setEmailStatus('error');
+      setTimeout(() => setEmailStatus('idle'), 5000);
+    } finally {
+      setIsEmailLoading(false);
     }
   };
 
@@ -128,6 +186,38 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
 
         {/* Acciones principales */}
         <div className="space-y-3 mb-6">
+          {/* Botón PRIMARIO: Probar EmailJS */}
+          <motion.button
+            onClick={sendTestEmail}
+            disabled={isEmailLoading}
+            className={`w-full py-3 px-8 rounded-[28px] border flex items-center justify-center gap-3 text-[15px] font-normal transition-all duration-300 ${emailStatus === 'success'
+              ? 'bg-green-100/70 backdrop-blur-sm text-green-700 border-green-200'
+              : emailStatus === 'error'
+                ? 'bg-red-100/70 backdrop-blur-sm text-red-600 border-red-200'
+                : isEmailLoading
+                  ? 'bg-blue-100/70 backdrop-blur-sm text-blue-600 border-blue-200'
+                  : 'bg-gradient-to-r from-[#33E1CE]/20 to-[#8D4CFF]/20 backdrop-blur-sm text-[#8D4CFF] border-[#8D4CFF]/30 hover:from-[#33E1CE]/30 hover:to-[#8D4CFF]/30'
+              }`}
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+            whileHover={!isEmailLoading ? { scale: 1.01 } : {}}
+            whileTap={!isEmailLoading ? { scale: 0.99 } : {}}
+          >
+            {isEmailLoading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Enviando correo de prueba...
+              </>
+            ) : emailStatus === 'success' ? (
+              'Correo enviado exitosamente ✓'
+            ) : emailStatus === 'error' ? (
+              'Error al enviar correo ✗'
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                Probar integración EmailJS
+              </>
+            )}
+          </motion.button>
 
           {/* Botón SECUNDARIO: Eliminar respuestas */}
           <motion.button
