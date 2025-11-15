@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { CheckCircle2, Home } from 'lucide-react';
 import { useEffect } from 'react';
+import emailjs from '@emailjs/browser';
 import isologo from 'figma:asset/ba49dfa6856e5c46796ea1e65e26fd53f21677b4.png';
 
 interface FinalScreenProps {
@@ -20,8 +21,53 @@ interface FinalScreenProps {
 }
 
 export function FinalScreen({ responses }: FinalScreenProps) {
+  // Configuración EmailJS
+  const emailConfig = {
+    serviceId: 'service_7v9yiqj',
+    templateId: 'template_4bdeeal',
+    publicKey: 'gzdvhtfWSXknqD1d4'
+  };
+
+  // Inicializar EmailJS
+  useEffect(() => {
+    emailjs.init(emailConfig.publicKey);
+  }, []);
+
+  // Función para enviar email automático
+  const sendSurveyEmail = async (surveyData: any) => {
+    try {
+      const templateParams = {
+        timestamp: `${surveyData.fecha} a las ${surveyData.hora}`,
+        pregunta_01: `Cuando te toca consultar el Título B de la NSR-10, ¿qué sientes realmente? - ${responses.response_01}`,
+        pregunta_02: `¿Cómo calificarías tu nivel de comprensión de los requisitos del Título B de la NSR-10? - ${responses.response_02}`,
+        pregunta_03: `¿Qué tan claro te parece el lenguaje del Título B de la NSR-10? - ${responses.response_03}`,
+        pregunta_04: `Cuando necesitas encontrar un artículo dentro del Título B de la NSR-10, ¿qué suele pasar? - ${responses.response_04}`,
+        pregunta_05: `¿Cuánto te cansa leer el PDF actual de la NSR-10? - ${responses.response_05}`,
+        pregunta_06: `¿Qué formato te ayuda más a entender un tema técnico? - ${Array.isArray(responses.response_06) ? responses.response_06.join(', ') : responses.response_06}`,
+        pregunta_07: `¿Qué tan útil sería que la NSR-10 tuviera buscador y navegación rápida? - ${responses.response_07}`,
+        pregunta_08: `Si BRIX pudiera tener un superpoder, ¿cuál elegirías? - ${responses.response_08}`,
+        pregunta_09: `¿Qué tantas ganas tendrías de usar BRIX para estudiar el Título B de la NSR-10? - ${responses.response_09}`,
+        pregunta_10: `¿Cómo describirías tu experiencia actual con el Título B de la NSR-10? - ${responses.response_10}`,
+        pregunta_11: `Comentarios adicionales o sugerencias: ${responses.response_11 || 'Sin comentarios adicionales'}`,
+        respuestas_completas: JSON.stringify(surveyData, null, 2),
+        email: 'dandreasanchez@unicolmayor.edu.co',
+        name: `Usuario BRIX - ${surveyData.id}`
+      };
+
+      await emailjs.send(
+        emailConfig.serviceId,
+        emailConfig.templateId,
+        templateParams
+      );
+      
+      console.log('Email de encuesta enviado exitosamente');
+    } catch (error) {
+      console.error('Error enviando email de encuesta:', error);
+    }
+  };
+
   // Guardar respuestas en localStorage
-  const saveResponses = () => {
+  const saveResponses = async () => {
     const now = new Date();
     const sessionId = `BRIX-${now.getTime()}`;
     
@@ -51,6 +97,9 @@ export function FinalScreen({ responses }: FinalScreenProps) {
     
     // Guardar en localStorage
     localStorage.setItem('brix_survey_responses', JSON.stringify(allResponses));
+    
+    // Enviar email automáticamente
+    await sendSurveyEmail(surveyData);
   };
 
   // Guardar al montar el componente
